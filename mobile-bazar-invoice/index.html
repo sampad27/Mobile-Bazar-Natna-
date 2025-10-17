@@ -12,13 +12,150 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css" />
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
-    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        @media print {
+            @page { 
+                size: A4; 
+                margin: 20mm; 
+            }
+            body { 
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .no-print { 
+                display: none !important; 
+            }
+            .print-container { 
+                page-break-after: avoid; 
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .bg-blue-600, .bg-gradient-to-r {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(90deg, #3490dc, #6574cd);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 
+            to { 
+                transform: rotate(360deg); 
+            } 
+        }
+
+        #dashboardSection, 
+        #adminModal, 
+        #stockSection, 
+        #sendModal { 
+            display: none; 
+        }
+
+        /* DataTables responsive fix */
+        table.dataTable {
+            width: 100% !important;
+            margin: 0 auto;
+            clear: both;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .dataTables_wrapper {
+            position: relative;
+            clear: both;
+        }
+
+        /* Ensure table responsiveness */
+        .dtr-inline.collapsed > tbody > tr > td:first-child:before,
+        .dtr-inline.collapsed > tbody > tr > th:first-child:before {
+            top: 10px;
+            left: 10px;
+        }
+
+        .history-actions {
+            white-space: nowrap;
+        }
+
+        /* Marquee style for top banner */
+        .marquee-container {
+            background: linear-gradient(90deg, #3490dc, #6574cd);
+            color: white;
+            padding: 10px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .marquee-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marquee 20s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* Tab styles */
+        .tab-button {
+            padding: 10px 20px;
+            border: none;
+            background: #e5e7eb;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
+    <!-- TOP BANNER -->
+    <div class="marquee-container no-print">
+        <div class="marquee-content">
+            🎉 Welcome to Mobile Bazar Natna - Your Trusted Mobile Store! 🎉 &nbsp;&nbsp;&nbsp;&nbsp; 
+            📱 Best Prices Guaranteed! 📱 &nbsp;&nbsp;&nbsp;&nbsp;
+            🚚 Free Home Delivery Available! 🚚 &nbsp;&nbsp;&nbsp;&nbsp;
+            💰 EMI Options Available! 💰 &nbsp;&nbsp;&nbsp;&nbsp;
+            📞 Contact: 923224083545 📞
+        </div>
+    </div>
+
     <!-- LOGIN SECTION -->
     <div id="loginSection" class="flex items-center justify-center h-screen">
         <div class="bg-white p-8 rounded shadow w-full max-w-sm">
-            <h1 class="text-2xl font-bold mb-4 text-center">Invoice App - Login<br>Admin & User</h1>
+            <h1 class="text-2xl font-bold mb-4 text-center">Mobile Bazar Natna - Login<br>Admin & User</h1>
             <form id="loginForm">
                 <label class="block mb-2 text-sm font-medium">Username</label>
                 <input type="text" name="username" class="border w-full p-2 rounded mb-4" required />
@@ -52,9 +189,9 @@
                     <button type="button" onclick="openSendModal()" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded w-full">Send Invoice</button>
                     <button type="button" onclick="clearForm()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full">Clear Form</button>
                     <button type="button" onclick="toggleHistory()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full">History</button>
+                    <button type="button" onclick="openAddModal()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded w-full">Add Customer/Mobile</button>
                 </div>
                 <div id="adminControls" class="mt-6 space-y-2" style="display:none;">
-                    <button type="button" onclick="openAddMobileModal()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded w-full">Add Mobile</button>
                     <button type="button" onclick="showStock()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded w-full">Show Stock</button>
                     <button type="button" onclick="showImeiStock()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded w-full">IMEI Stock</button>
                 </div>
@@ -86,6 +223,8 @@
                                 <input type="text" name="address" class="mt-1 block w-full border rounded px-3 py-2" required />
                                 <label class="block text-sm font-medium text-gray-700 mt-3">Contact No.:</label>
                                 <input type="text" name="contact" class="mt-1 block w-full border rounded px-3 py-2" required />
+                                <label class="block text-sm font-medium text-gray-700 mt-3">Alternative Contact No. (Optional):</label>
+                                <input type="text" name="alternativeContact" class="mt-1 block w-full border rounded px-3 py-2" />
                             </div>
                             <div class="w-full sm:w-1/2">
                                 <label class="block text-sm font-medium text-gray-700">Date:</label>
@@ -147,8 +286,8 @@
                                     </tr>
                                     <tr>
                                         <td class="border border-gray-300 p-2">
-                                            IMEI No. 2:
-                                            <input type="text" name="imei2" class="mt-1 block w-full border rounded px-2 py-1" required />
+                                            IMEI No. 2 (Optional):
+                                            <input type="text" name="imei2" class="mt-1 block w-full border rounded px-2 py-1" />
                                         </td>
                                         <td class="border border-gray-300 p-2"></td>
                                         <td class="border border-gray-300 p-2"></td>
@@ -276,7 +415,7 @@
         </div>
 
         <!-- SEND INVOICE MODAL -->
-        <div id="sendModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+        <div id="sendModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
                 <h2 class="text-xl font-bold mb-4">Send Invoice</h2>
                 <div class="mb-4">
@@ -301,27 +440,81 @@
             </div>
         </div>
 
-        <!-- ADD MOBILE MODAL -->
-        <div id="adminModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
-                <h2 class="text-xl font-bold mb-4" id="mobileModalTitle">Add Mobile</h2>
-                <form id="mobileForm">
-                    <label class="block mb-2 text-sm font-medium">Set Name</label>
-                    <input type="text" id="mobileSetName" class="border w-full p-2 rounded mb-4" required />
-                    <label class="block mb-2 text-sm font-medium">Variant</label>
-                    <input type="text" id="mobileVariant" class="border w-full p-2 rounded mb-4" required />
-                    <label class="block mb-2 text-sm font-medium">Price</label>
-                    <input type="number" id="mobilePrice" class="border w-full p-2 rounded mb-4" step="0.01" required />
-                    <div id="imeiFields">
-                        <label class="block mb-2 text-sm font-medium">IMEI Numbers (One per line) *</label>
-                        <textarea id="mobileImeis" class="border w-full p-2 rounded mb-4" rows="6" placeholder="Enter IMEI numbers, one per line" required></textarea>
-                        <small class="text-gray-500">* Stock will be automatically calculated based on IMEI count</small>
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button type="button" onclick="closeAddMobileModal()" class="bg-gray-500 hover:bg-gray-600 text-white py-1 px-3 rounded">Cancel</button>
-                        <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white py-1 px-3 rounded">Save Mobile</button>
-                    </div>
-                </form>
+        <!-- ADD CUSTOMER/MOBILE MODAL -->
+        <div id="adminModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div class="bg-white p-6 rounded shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <h2 class="text-xl font-bold mb-4">Add Customer & Mobile</h2>
+                
+                <!-- Tab Navigation -->
+                <div class="flex mb-4 border-b">
+                    <button type="button" onclick="switchTab('customerTab')" class="tab-button active w-1/2" id="customerTabBtn">
+                        Customer Details
+                    </button>
+                    <button type="button" onclick="switchTab('mobileTab')" class="tab-button w-1/2" id="mobileTabBtn">
+                        Mobile Details
+                    </button>
+                </div>
+
+                <!-- Customer Tab -->
+                <div id="customerTab" class="tab-content active">
+                    <form id="customerForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block mb-2 text-sm font-medium">Customer Name</label>
+                                <input type="text" id="customerName" class="border w-full p-2 rounded" placeholder="Enter customer name" />
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium">Mobile Number</label>
+                                <input type="text" id="customerMobile" class="border w-full p-2 rounded" placeholder="Enter mobile number" />
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block mb-2 text-sm font-medium">Address</label>
+                                <input type="text" id="customerAddress" class="border w-full p-2 rounded" placeholder="Enter complete address" />
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block mb-2 text-sm font-medium">Alternative Mobile Number (Optional)</label>
+                                <input type="text" id="customerAltMobile" class="border w-full p-2 rounded" placeholder="Enter alternative mobile number" />
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-2 mt-4">
+                            <button type="button" onclick="closeAddModal()" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded">Cancel</button>
+                            <button type="button" onclick="applyCustomerToForm()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Apply to Invoice</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Mobile Tab -->
+                <div id="mobileTab" class="tab-content">
+                    <form id="mobileForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block mb-2 text-sm font-medium">Set Name</label>
+                                <input type="text" id="mobileSetName" class="border w-full p-2 rounded" required />
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium">Variant</label>
+                                <input type="text" id="mobileVariant" class="border w-full p-2 rounded" required />
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium">Price</label>
+                                <input type="number" id="mobilePrice" class="border w-full p-2 rounded" step="0.01" required />
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium">Stock Quantity</label>
+                                <input type="number" id="mobileStock" class="border w-full p-2 rounded" min="1" value="1" required />
+                            </div>
+                        </div>
+                        <div id="imeiFields">
+                            <label class="block mb-2 text-sm font-medium">IMEI Numbers (One per line) *</label>
+                            <textarea id="mobileImeis" class="border w-full p-2 rounded mb-2" rows="4" placeholder="Enter IMEI numbers, one per line" required></textarea>
+                            <small class="text-gray-500">* Stock will be automatically calculated based on IMEI count</small>
+                        </div>
+                        <div class="flex justify-end gap-2 mt-4">
+                            <button type="button" onclick="closeAddModal()" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded">Cancel</button>
+                            <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded">Save Mobile</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
