@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_top" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css" />
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    <style>
+        @media print {
+            @page { 
+                size: A4; 
+                margin: 20mm; 
+            }
+            body { 
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .no-print { 
+                display: none !important; 
+            }
+            .print-container { 
+                page-break-after: avoid; 
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .bg-blue-600, .bg-gradient-to-r {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(90deg, #3490dc, #6574cd);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 
+            to { 
+                transform: rotate(360deg); 
+            } 
+        }
+
+        #dashboardSection, 
+        #adminModal, 
+        #stockSection, 
+        #sendModal { 
+            display: none; 
+        }
+
+        /* DataTables responsive fix */
+        table.dataTable {
+            width: 100% !important;
+            margin: 0 auto;
+            clear: both;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .dataTables_wrapper {
+            position: relative;
+            clear: both;
+        }
+
+        /* Ensure table responsiveness */
+        .dtr-inline.collapsed > tbody > tr > td:first-child:before,
+        .dtr-inline.collapsed > tbody > tr > th:first-child:before {
+            top: 10px;
+            left: 10px;
+        }
+
+        .history-actions {
+            white-space: nowrap;
+        }
+
+        /* Marquee style for top banner */
+        .marquee-container {
+            background: linear-gradient(90deg, #3490dc, #6574cd);
+            color: white;
+            padding: 10px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .marquee-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marquee 20s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="marquee-container no-print">
+        <div class="marquee-content">
+            🎉 Welcome to Mobile Bazar Natna - Your Trusted Mobile Store! 🎉 &nbsp;&nbsp;&nbsp;&nbsp; 
+            📱 Best Prices Guaranteed! 📱 &nbsp;&nbsp;&nbsp;&nbsp;
+            💰 EMI Options Available! 💰 &nbsp;&nbsp;&nbsp;&nbsp;
+            📞 Contact: 8170964267 📞
+        </div>
+    </div>
+
+    <div id="loginSection" class="flex items-center justify-center h-screen">
+        <div class="bg-white p-8 rounded shadow w-full max-w-sm">
+            <h1 class="text-2xl font-bold mb-4 text-center">Mobile Bazar Natna - Login<br>Admin & User</h1>
+            <form id="loginForm">
+                <label class="block mb-2 text-sm font-medium">Username</label>
+                <input type="text" name="username" class="border w-full p-2 rounded mb-4" required />
+                <label class="block mb-2 text-sm font-medium">Password</label>
+                <input type="password" name="password" class="border w-full p-2 rounded mb-4" required />
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="dashboardSection">
+        <header class="flex justify-between items-center bg-blue-700 text-white py-2 px-4">
+            <div>
+                <span id="headerUser" class="text-lg font-semibold"></span>
+            </div>
+            <div>
+                <span id="currentTime" class="mr-4 text-sm"></span>
+                <button type="button" onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded">Logout</button>
+            </div>
+        </header>
+
+        <div class="flex">
+            <aside class="w-64 bg-gray-200 p-4 no-print min-h-screen">
+                <h2 class="text-xl font-bold mb-4">Invoice Menu</h2>
+                <div class="space-y-2">
+                    <button type="button" onclick="newInvoice()" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded w-full">New Invoice</button>
+                    <button type="button" onclick="document.getElementById('hiddenSubmit').click()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full">Save Invoice</button>
+                    <button type="button" onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full">Print Now</button>
+                    <button type="button" onclick="openSendModal()" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded w-full">Send Invoice</button>
+                    <button type="button" onclick="clearForm()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full">Clear Form</button>
+                    <button type="button" onclick="toggleHistory()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full">History</button>
+                    <button type="button" onclick="openAddMobileModal()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded w-full">Add Mobile</button>
+                </div>
+                <div id="adminControls" class="mt-6 space-y-2" style="display:none;">
+                    <button type="button" onclick="showStock()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded w-full">Show Stock</button>
+                    <button type="button" onclick="showImeiStock()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded w-full">IMEI Stock</button>
+                </div>
+            </aside>
+
+            <div class="flex-1 p-4">
+                <div id="loadingIndicator" class="hidden no-print loader-overlay" style="height: 60px;">
+                    <div class="loader"></div>
+                </div>
+
+                <form id="invoiceForm">
+                    <button type="submit" id="hiddenSubmit" style="display: none;"></button>
+                    <input type="hidden" name="currentUser" id="currentUserField" />
+                    <input type="hidden" name="currentUserType" id="currentUserTypeField" />
+                    <div id="invoiceContainer" class="print-container w-full mx-auto bg-white shadow-lg rounded p-6">
+                        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded mb-6">
+                            <h1 class="text-3xl font-bold">MOBILE BAZAR NATNA</h1>
+                            <p class="mt-1">Address : Natna</p>
+                            <!-- <p>GSTIN: 09CEOPS1586K1ZL</p> -->
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+                            <div class="w-full sm:w-1/2">
+                                <label class="block text-sm font-medium text-gray-700">Name:</label>
+                                <input type="text" name="name" class="mt-1 block w-full border rounded px-3 py-2" required />
+                                <label class="block text-sm font-medium text-gray-700 mt-3">Address:</label>
+                                <input type="text" name="address" class="mt-1 block w-full border rounded px-3 py-2" required />
+                                <label class="block text-sm font-medium text-gray-700 mt-3">Contact No.:</label>
+                                <input type="text" name="contact" class="mt-1 block w-full border rounded px-3 py-2" required />
+                                <label class="block text-sm font-medium text-gray-700 mt-3">Alternative Contact No. (Optional):</label>
+                                <input type="text" name="alternativeContact" class="mt-1 block w-full border rounded px-3 py-2" />
+                            </div>
+                            <div class="w-full sm:w-1/2">
+                                <label class="block text-sm font-medium text-gray-700">Date:</label>
+                                <input type="date" name="date" id="dateField" class="mt-1 block w-full border rounded px-3 py-2" required />
+                                <label class="block text-sm font-medium text-gray-700 mt-3">Invoice No.:</label>
+                                <input type="text" name="invoiceNo" id="invoiceNumberField" class="mt-1 block w-full border rounded px-3 py-2" required />
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto mb-6">
+                            <table class="w-full border-collapse border border-gray-300">
+                                <thead>
+                                    <tr class="bg-blue-100">
+                                        <th class="border border-gray-300 p-2 text-left">Description Of Goods</th>
+                                        <th class="border border-gray-300 p-2 text-left">Qty.</th>
+                                        <th class="border border-gray-300 p-2 text-left">Rate</th>
+                                        <th class="border border-gray-300 p-2 text-left">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="border border-gray-300 p-2">
+                                            Set Name:
+                                            <select name="setName" id="setNameDropdown" class="mt-1 block w-full border rounded px-2 py-1">
+                                                <option value="">Select Set</option>
+                                            </select>
+                                            <label class="block text-sm font-medium text-gray-700 mt-2">Variant:</label>
+                                            <select name="variant" id="variantDropdown" class="mt-1 block w-full border rounded px-2 py-1">
+                                                <option value="">Select Variant</option>
+                                            </select>
+                                        </td>
+                                        <td class="border border-gray-300 p-2">
+                                            <input type="number" name="qty" id="qtyField" class="mt-1 block w-full border rounded px-2 py-1" required />
+                                        </td>
+                                        <td class="border border-gray-300 p-2">
+                                            <input type="number" name="rate" id="rateField" class="mt-1 block w-full border rounded px-2 py-1" required />
+                                        </td>
+                                        <td class="border border-gray-300 p-2">
+                                            <span id="amountDisplay" class="font-bold text-lg">0.00</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="border border-gray-300 p-2">
+                                            Model No.:
+                                            <input type="text" name="modelNo" class="mt-1 block w-full border rounded px-2 py-1" />
+                                        </td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="border border-gray-300 p-2">
+                                            IMEI No. 1:
+                                            <input type="text" name="imei1" class="mt-1 block w-full border rounded px-2 py-1" required />
+                                        </td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="border border-gray-300 p-2">
+                                            IMEI No. 2 (Optional):
+                                            <input type="text" name="imei2" class="mt-1 block w-full border rounded px-2 py-1" />
+                                        </td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                        <td class="border border-gray-300 p-2"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mb-6 space-y-2">
+                            <p class="text-sm">
+                                Total Amount:
+                                <span id="baseAmountDisplay" class="font-bold text-lg">0.00</span>
+                            </p>
+                            <p class="text-sm">
+                                Add: CGST @
+                                <input type="number" step="0.01" name="cgst" id="cgstField" class="inline-block w-24 border rounded px-2 py-1" value="0" required />%
+                            </p>
+                            <p class="text-sm">
+                                Add: SGST @
+                                <input type="number" step="0.01" name="sgst" id="sgstField" class="inline-block w-24 border rounded px-2 py-1" value="0" required />%
+                            </p>
+                            <p class="text-sm">
+                                GRAND TOTAL:
+                                <span id="grandTotalDisplay" class="font-bold text-lg">0.00</span>
+                            </p>
+                        </div>
+
+                        <div class="mb-6">
+                            <p class="text-sm font-medium">E &amp; O.E</p>
+                            <p class="text-sm font-medium">TERMS &amp; CONDITIONS:</p>
+                            <ul class="list-disc list-inside text-sm">
+                                <li>All Subject to Kaushambi Jurisdiction</li>
+                                <li>Goods once sold will not be taken back</li>
+                                <li>Will be valid as per the service center.</li>
+                                <li>Opened goods will not be returned or exchanged.</li>
+                                <li>Broken and open boxes will not be returned.</li>
+                                <li>For warranty-related complaints, please contact the service center directly.</li>
+                            </ul>
+                        </div>
+                        <div class="mb-6 text-right">
+                            <p class="text-sm">For: MRI</p>
+                            <p class="text-sm">Signature</p>
+                        </div>
+                    </div>
+                </form>
+
+                <div id="historySection" class="no-print hidden mt-6 bg-white shadow-lg rounded p-6">
+                    <div class="flex flex-col sm:flex-row items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold text-blue-700">All Invoices History</h2>
+                        <div class="flex flex-col sm:flex-row gap-2 items-center">
+                            <div class="flex items-center gap-2">
+                                <label class="text-sm font-medium text-gray-700">Start Date:</label>
+                                <input type="date" id="startDate" class="border rounded px-2 py-1" />
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-sm font-medium text-gray-700">End Date:</label>
+                                <input type="date" id="endDate" class="border rounded px-2 py-1" />
+                            </div>
+                            <button type="button" onclick="filterByDate()" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm">Filter</button>
+                            <button type="button" onclick="clearFilter()" class="bg-gray-500 hover:bg-gray-600 text-white py-1 px-3 rounded text-sm">Clear</button>
+                        </div>
+                        <button type="button" onclick="backToInvoice()" class="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded">Back to Invoice</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="historyTable" class="stripe hover row-border display nowrap w-full">
+                            <thead>
+                                <tr>
+                                    <th>Invoice No.</th>
+                                    <th>Date</th>
+                                    <th>Name</th>
+                                    <th>Contact</th>
+                                    <th>Set Name</th>
+                                    <th>IMEI Numbers</th>
+                                    <th>Amount</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="stockSection" class="no-print hidden mt-6 bg-white shadow-lg rounded p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold text-purple-700">Mobile Stock <span class="text-xl">📱</span></h2>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="stockSearchInput" placeholder="Search by mobile" class="border rounded px-2 py-1">
+                            <button type="button" onclick="filterStock()" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded">Search</button>
+                            <button type="button" onclick="closeStock()" class="bg-purple-600 hover:bg-purple-700 text-white py-1 px-3 rounded">Close Stock</button>
+                        </div>
+                    </div>
+                    <div id="stockContainer"></div>
+                </div>
+
+                <div id="imeiStockSection" class="no-print hidden mt-6 bg-white shadow-lg rounded p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold text-green-700">IMEI Stock Details <span class="text-xl">🔢</span></h2>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="imeiSearchInput" placeholder="Search by IMEI or Mobile" class="border rounded px-2 py-1">
+                            <button type="button" onclick="filterImeiStock()" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded">Search</button>
+                            <button type="button" onclick="closeImeiStock()" class="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded">Close</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="imeiStockTable" class="stripe hover row-border display nowrap w-full">
+                            <thead>
+                                <tr>
+                                    <th>Set Name</th>
+                                    <th>Variant</th>
+                                    <th>IMEI Number</th>
+                                    <th>Status</th>
+                                    <th>Customer Name</th>
+                                    <th>Customer Address</th>
+                                    <th>Customer Number</th>
+                                    <th>Alternative Number</th>
+                                    <th>Date Added</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sendModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4">Send Invoice</h2>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">Send via:</label>
+                    <select id="sendMethod" class="border w-full p-2 rounded">
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="email">Email</option>
+                    </select>
+                </div>
+                <div id="whatsappField" class="mb-4">
+                    <label class="block mb-2 text-sm font-medium">WhatsApp Number:</label>
+                    <input type="text" id="whatsappNumber" class="border w-full p-2 rounded" placeholder="e.g., 923224083545" />
+                </div>
+                <div id="emailField" class="mb-4" style="display: none;">
+                    <label class="block mb-2 text-sm font-medium">Email Address:</label>
+                    <input type="email" id="emailAddress" class="border w-full p-2 rounded" placeholder="e.g., example@email.com" />
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeSendModal()" class="bg-gray-500 hover:bg-gray-600 text-white py-1 px-3 rounded">Cancel</button>
+                    <button type="button" onclick="sendInvoice()" class="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="adminModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-white p-4 rounded-lg shadow-lg w-full max-w-sm">
+                <h2 class="text-lg font-semibold mb-3" id="mobileModalTitle">Add Mobile</h2>
+                <form id="mobileForm" class="space-y-2">
+                <label class="block text-sm font-medium">Set Name</label>
+                <input type="text" id="mobileSetName" class="border w-full p-1.5 rounded text-sm" required />
+
+                <label class="block text-sm font-medium">Variant</label>
+                <input type="text" id="mobileVariant" class="border w-full p-1.5 rounded text-sm" required />
+
+                <label class="block text-sm font-medium">Customer Name</label>
+                <input type="text" id="mobileCustomerName" class="border w-full p-1.5 rounded text-sm" />
+
+                <label class="block text-sm font-medium">Customer Address</label>
+                <input type="text" id="mobileCustomerAddress" class="border w-full p-1.5 rounded text-sm" />
+
+                <label class="block text-sm font-medium">Customer Number</label>
+                <input type="text" id="mobileCustomerNumber" class="border w-full p-1.5 rounded text-sm" />
+
+                <label class="block text-sm font-medium">Alternative Number (Optional)</label>
+                <input type="text" id="mobileAlternativeNumber" class="border w-full p-1.5 rounded text-sm" />
+
+                <label class="block text-sm font-medium">Price</label>
+                <input type="number" id="mobilePrice" class="border w-full p-1.5 rounded text-sm" step="0.01" required />
+
+                <label class="block text-sm font-medium">IMEI Numbers (One per line) *</label>
+                <textarea id="mobileImeis" class="border w-full p-1.5 rounded text-sm" rows="4" placeholder="Enter IMEI numbers, one per line" required></textarea>
+                <small class="text-gray-500 text-xs">* Stock will be automatically calculated based on IMEI count</small>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAddMobileModal()" class="bg-gray-500 hover:bg-gray-600 text-white py-1 px-2 rounded text-sm">Cancel</button>
+                    <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white py-1 px-2 rounded text-sm">Save</button>
+                </div>
+                </form>
+            </div>
+        </div>
+
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
